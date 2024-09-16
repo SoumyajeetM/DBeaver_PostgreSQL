@@ -1,0 +1,417 @@
+with t1 as (
+  select * from datamart.atd  
+)
+--select "t1"."cAcctnStts", count(*),
+--sum("t1"."nEODBlnc") as "EOP balance",
+--sum("t1"."nAvlblBlnc") as "AVL Balance"
+--from t1
+--group by "t1"."cAcctnStts";
+
+--select "t1"."cPrdctNm", count(*), sum("t1"."nEODBlnc") as "EOP balance", sum("t1"."nAvlblBlnc") as "AVL Balance"
+--from t1
+--group by "t1"."cPrdctNm";
+
+select "t1"."cAccntTyp", count(*), sum("t1"."nEODBlnc") as "EOP balance", sum("t1"."nAvlblBlnc") as "AVL Balance"
+from t1
+group by "t1"."cAccntTyp";
+------------------------------------------------
+with t1 as (
+  select * from datamart.tcasatd 
+)
+select "t1"."cTrnsctnChnnl", count(*),
+sum("t1"."nAccntBlncPstTrnsctn") as "Total"
+from t1 WHERE "dtTrnsctnCrtn" >= DATE '2024-04-01'
+  AND "dtTrnsctnCrtn" < DATE '2024-05-01'
+group by "t1"."cTrnsctnChnnl";
+
+--select "t1"."cTrnsctnTyp", count(*),
+--sum("t1"."nAccntBlncPstTrnsctn") as "Total"
+--from t1 WHERE "dtTrnsctnCrtn" >= DATE '2024-04-01'
+--  AND "dtTrnsctnCrtn" < DATE '2024-05-01'
+--group by "t1"."cTrnsctnTyp";
+---------------------------------------------------------------------------------------
+select * from public.lsq_activity 
+
+SELECT column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'lsq_activity';
+
+-- Analyze activities over time
+SELECT 
+  DATE_TRUNC('day', "Activity_Date___Time") AS activity_date,
+  COUNT(*) AS count
+FROM public.lsq_activity
+GROUP BY activity_date
+ORDER BY activity_date;
+
+-- Reason for disposition (RFD) analysis
+SELECT 
+  "RFD",
+  COUNT(*) AS count
+FROM public.lsq_activity
+GROUP BY "RFD"
+ORDER BY count DESC;
+
+-- Status analysis
+SELECT 
+  "Status",
+  COUNT(*) AS count
+FROM public.lsq_activity
+GROUP BY "Status"
+ORDER BY count DESC;
+
+-- Analyze data ingestion
+SELECT 
+  MIN("ingested_at") AS first_ingested,
+  MAX("ingested_at") AS last_ingested,
+  COUNT(*) AS total_records
+FROM public.lsq_activity;
+-- Basic counts and summaries
+SELECT 
+  COUNT(DISTINCT "Account_ID") AS unique_accounts,
+  COUNT(DISTINCT "Phone") AS unique_phones,
+  COUNT(DISTINCT "Activity_Name") AS unique_activities,
+  COUNT(DISTINCT "Owner") AS unique_owners,
+  COUNT(DISTINCT "Call_Type") AS unique_call_types,
+  COUNT(DISTINCT "Disposition") AS unique_dispositions,
+  COUNT(DISTINCT "Sub_Disposition") AS unique_sub_dispositions
+FROM public.lsq_activity;
+
+-- Summarize PTP amounts
+SELECT 
+  SUM("PTP_1_Amount") AS total_ptp_1_amount,
+  AVG("PTP_1_Amount") AS avg_ptp_1_amount,
+  SUM("PTP_2_Amount") AS total_ptp_2_amount,
+  AVG("PTP_2_Amount") AS avg_ptp_2_amount
+FROM public.lsq_activity;
+
+-- Group by Call_Type, Disposition, and Sub_Disposition
+SELECT 
+  "Call_Type",
+  "Disposition",
+  "Sub_Disposition",
+  COUNT(*) AS count,
+  SUM("PTP_1_Amount") AS total_ptp_1_amount,
+  SUM("PTP_2_Amount") AS total_ptp_2_amount
+FROM public.lsq_activity
+GROUP BY "Call_Type", "Disposition", "Sub_Disposition"
+ORDER BY count DESC;
+
+-- Analyze activities over time
+SELECT 
+  DATE_TRUNC('day', "Activity_Date___Time") AS activity_date,
+  COUNT(*) AS count
+FROM public.lsq_activity
+GROUP BY activity_date
+ORDER BY activity_date;
+
+-- Reason for disposition (RFD) analysis
+SELECT 
+  "RFD",
+  COUNT(*) AS count
+FROM public.lsq_activity
+GROUP BY "RFD"
+ORDER BY count DESC;
+
+-- Status analysis
+SELECT 
+  "Status",
+  COUNT(*) AS count
+FROM public.lsq_activity
+GROUP BY "Status"
+ORDER BY count DESC;
+
+-- Analyze data ingestion
+SELECT 
+  MIN("ingested_at") AS first_ingested,
+  MAX("ingested_at") AS last_ingested,
+  COUNT(*) AS total_records
+FROM public.lsq_activity;
+
+
+--for distinct account id
+SELECT
+  COUNT(DISTINCT CASE WHEN "PTP_1_Amount" > 0 AND 
+  ("PTP_2_Amount" = 0 OR "PTP_2_Amount" IS NULL) THEN "Account_ID" ELSE NULL END) AS paid_ptp1_not_ptp2,
+  COUNT(DISTINCT CASE WHEN ("PTP_1_Amount" = 0 OR "PTP_1_Amount" IS NULL) AND 
+  ("PTP_2_Amount" = 0 OR "PTP_2_Amount" IS NULL) THEN "Account_ID" ELSE NULL END) AS paid_none,
+  COUNT(DISTINCT CASE WHEN "PTP_1_Amount" > 0 AND "PTP_2_Amount" > 0 THEN "Account_ID" ELSE NULL END) AS paid_both
+FROM public.lsq_activity;
+
+
+select distinct "RFD" from public.lsq_activity  
+
+
+SELECT
+  "Owner",
+  COUNT(*) AS total_activities,
+  SUM("PTP_1_Amount") AS total_ptp_1_amount,
+  SUM("PTP_2_Amount") AS total_ptp_2_amount
+FROM public.lsq_activity
+GROUP BY "Owner"
+ORDER BY total_activities DESC;
+
+
+SELECT
+  "Call_Type",
+  COUNT(*) AS call_count
+FROM public.lsq_activity
+GROUP BY "Call_Type"
+ORDER BY call_count DESC;
+
+
+SELECT
+  "Disposition",
+  "Sub_Disposition",
+  COUNT(*) AS count
+FROM public.lsq_activity
+GROUP BY "Disposition", "Sub_Disposition"
+ORDER BY count DESC;
+
+SELECT
+  COUNT(*) AS count,
+  "Notes"
+FROM public.lsq_activity
+GROUP BY "Notes"
+ORDER BY count DESC
+LIMIT 10;
+
+SELECT 
+  DATE_TRUNC('day', "Activity_Date___Time") AS activity_date,
+  COUNT(*) AS count
+FROM public.lsq_activity
+GROUP BY activity_date
+ORDER BY activity_date;
+
+
+SELECT
+  DATE_TRUNC('month', "Activity_Date___Time") AS activity_month,
+  COUNT(DISTINCT CASE WHEN "PTP_1_Amount" > 0 THEN "Account_ID" ELSE NULL END) AS paid_ptp_1,
+  COUNT(DISTINCT CASE WHEN "PTP_2_Amount" > 0 THEN "Account_ID" ELSE NULL END) AS paid_ptp_2
+FROM public.lsq_activity
+GROUP BY activity_month
+ORDER BY activity_month;
+
+SELECT
+  call_count,
+  COUNT(DISTINCT "Account_ID") AS num_customers
+FROM (
+  SELECT
+    "Account_ID",
+    COUNT(*) AS call_count
+  FROM public.lsq_activity
+  GROUP BY "Account_ID"
+) subquery
+GROUP BY call_count
+ORDER BY call_count;
+
+
+WITH call_counts AS (
+  SELECT
+    "Account_ID",
+    COUNT(*) AS call_count
+  FROM public.lsq_activity
+  GROUP BY "Account_ID"
+),
+payments AS (
+  SELECT
+    "Account_ID",
+    MIN(CASE WHEN "PTP_1_Amount" > 0 THEN 1 ELSE NULL END) AS paid_after_1st_call,
+    MIN(CASE WHEN "PTP_1_Amount" > 0 OR "PTP_2_Amount" > 0 THEN 2 ELSE NULL END) AS paid_after_2nd_call,
+    MIN(CASE WHEN "PTP_1_Amount" > 0 OR "PTP_2_Amount" > 0 THEN 3 ELSE NULL END) AS paid_after_3rd_call,
+    MIN(CASE WHEN "PTP_1_Amount" > 0 OR "PTP_2_Amount" > 0 THEN 4 ELSE NULL END) AS paid_after_4th_call
+  FROM public.lsq_activity
+  GROUP BY "Account_ID"
+)
+SELECT
+  call_counts.call_count,
+  COUNT(DISTINCT call_counts."Account_ID") AS num_customers,
+  COUNT(DISTINCT CASE WHEN payments.paid_after_1st_call IS NOT NULL THEN call_counts."Account_ID" ELSE NULL END) AS paid_after_1st_call,
+  COUNT(DISTINCT CASE WHEN payments.paid_after_2nd_call IS NOT NULL THEN call_counts."Account_ID" ELSE NULL END) AS paid_after_2nd_call,
+  COUNT(DISTINCT CASE WHEN payments.paid_after_3rd_call IS NOT NULL THEN call_counts."Account_ID" ELSE NULL END) AS paid_after_3rd_call,
+  COUNT(DISTINCT CASE WHEN payments.paid_after_4th_call IS NOT NULL THEN call_counts."Account_ID" ELSE NULL END) AS paid_after_4th_call
+FROM call_counts
+LEFT JOIN payments ON call_counts."Account_ID" = payments."Account_ID"
+GROUP BY call_counts.call_count
+ORDER BY call_counts.call_count;
+
+
+
+
+
+WITH call_counts AS (
+  SELECT
+    "Account_ID",
+    COUNT(*) AS call_count
+  FROM public.lsq_activity
+  GROUP BY "Account_ID"
+),
+payments AS (
+  SELECT
+    "Account_ID",
+    MIN(CASE WHEN "PTP_1_Amount" > 0 AND call_rank = 1 THEN 1 END) AS paid_after_1st_call,
+    MIN(CASE WHEN "PTP_1_Amount" > 0 AND call_rank = 2 THEN 1 END) AS paid_after_2nd_call,
+    MIN(CASE WHEN "PTP_1_Amount" > 0 AND call_rank = 3 THEN 1 END) AS paid_after_3rd_call,
+    MIN(CASE WHEN "PTP_1_Amount" > 0 AND call_rank = 4 THEN 1 END) AS paid_after_4th_call
+  FROM (
+    SELECT
+      "Account_ID",
+      "PTP_1_Amount",
+      ROW_NUMBER() OVER (PARTITION BY "Account_ID" ORDER BY "Activity_Date___Time") AS call_rank
+    FROM public.lsq_activity
+  ) ranked_calls
+  GROUP BY "Account_ID"
+)
+SELECT
+  call_counts.call_count,
+  COUNT(DISTINCT call_counts."Account_ID") AS num_customers,
+  COUNT(DISTINCT CASE WHEN payments.paid_after_1st_call = 1 THEN call_counts."Account_ID" ELSE NULL END) AS paid_after_1st_call,
+  COUNT(DISTINCT CASE WHEN payments.paid_after_2nd_call = 1 THEN call_counts."Account_ID" ELSE NULL END) AS paid_after_2nd_call,
+  COUNT(DISTINCT CASE WHEN payments.paid_after_3rd_call = 1 THEN call_counts."Account_ID" ELSE NULL END) AS paid_after_3rd_call,
+  COUNT(DISTINCT CASE WHEN payments.paid_after_4th_call = 1 THEN call_counts."Account_ID" ELSE NULL END) AS paid_after_4th_call
+FROM call_counts
+LEFT JOIN payments ON call_counts."Account_ID" = payments."Account_ID"
+GROUP BY call_counts.call_count
+ORDER BY call_counts.call_count;
+
+
+
+WITH call_counts AS (
+  SELECT
+    "Account_ID",
+    COUNT(*) AS call_count
+  FROM public.lsq_activity
+  GROUP BY "Account_ID"
+),
+payments AS (
+  SELECT
+    "Account_ID",
+    COUNT(DISTINCT CASE WHEN "PTP_1_Amount" > 0 THEN "Account_ID" ELSE NULL END) AS paid_ptp1,
+    COUNT(DISTINCT CASE WHEN "PTP_2_Amount" > 0 THEN "Account_ID" ELSE NULL END) AS paid_ptp2
+  FROM public.lsq_activity
+  GROUP BY "Account_ID"
+)
+SELECT
+  call_counts.call_count,
+  COUNT(DISTINCT call_counts."Account_ID") AS num_customers,
+  COUNT(DISTINCT CASE WHEN payments.paid_ptp1 > 0 THEN call_counts."Account_ID" ELSE NULL END) AS total_paid_ptp1,
+  COUNT(DISTINCT CASE WHEN payments.paid_ptp2 > 0 THEN call_counts."Account_ID" ELSE NULL END) AS total_paid_ptp2
+FROM call_counts
+LEFT JOIN payments ON call_counts."Account_ID" = payments."Account_ID"
+GROUP BY call_counts.call_count
+ORDER BY call_counts.call_count;
+
+SELECT
+  COUNT(DISTINCT CASE WHEN "PTP_1_Amount" > 0 THEN "Account_ID" ELSE NULL END) AS total_paid_ptp1,
+  COUNT(DISTINCT CASE WHEN "PTP_2_Amount" > 0 THEN "Account_ID" ELSE NULL END) AS total_paid_ptp2
+FROM public.lsq_activity;
+---------------------------------------------------------------------------------------------
+
+
+select * from public.lsq_collection
+-- Retrieve all columns from lsq_collection
+SELECT column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'lsq_collection';
+ 
+-- Analyzing Loan Amount and Account Balance
+SELECT 
+    AVG("lsq_collection"."Loan_Amount") AS Avg_Loan_Amount,
+    MAX("lsq_collection"."Account_Balance") AS Max_Account_Balance,
+    MIN("lsq_collection"."Account_Balance") AS Min_Account_Balance,
+    SUM("lsq_collection"."Principal_Due") AS Total_Principal_Due,
+    SUM("lsq_collection"."Interest_Due") AS Total_Interest_Due
+FROM "public"."lsq_collection";
+
+-- Analyzing Age and Gender Distribution
+SELECT 
+    "lsq_collection"."Gender__Client",
+    COUNT(*) AS Total_Count,
+    AVG("lsq_collection"."Age") AS Avg_Age,
+    MAX("lsq_collection"."Age") AS Max_Age,
+    MIN("lsq_collection"."Age") AS Min_Age
+FROM "public"."lsq_collection"
+GROUP BY "lsq_collection"."Gender__Client";
+
+-- Analyzing Employment Status and Monthly Income
+SELECT 
+    "lsq_collection"."Employment_Status__Client",
+    COUNT(*) AS Total_Count,
+    AVG("lsq_collection"."Monthly_Income__Client") AS Avg_Monthly_Income,
+    MAX("lsq_collection"."Monthly_Income__Client") AS Max_Monthly_Income,
+    MIN("lsq_collection"."Monthly_Income__Client") AS Min_Monthly_Income
+FROM "public"."lsq_collection"
+GROUP BY "lsq_collection"."Employment_Status__Client";
+
+-- Analyzing Age distribution and civil status
+SELECT 
+    "lsq_collection"."Age",
+    "lsq_collection"."Civil_Status__Client",
+    COUNT(*) AS Total_Count
+FROM "public"."lsq_collection"
+GROUP BY "lsq_collection"."Age", "lsq_collection"."Civil_Status__Client"
+ORDER BY "lsq_collection"."Age";
+
+-- Analyzing Payment and Contact Attempts
+SELECT 
+    "lsq_collection"."Call_Type",
+    COUNT(*) AS Total_Count,
+    SUM("lsq_collection"."Number_of_Attempts") AS Total_Attempts,
+    AVG("lsq_collection"."Number_of_Connects_") AS Avg_Connects,
+    MAX("lsq_collection"."Last_Connect") AS Latest_Connect,
+    MIN("lsq_collection"."First_Connect") AS First_Connect
+FROM "public"."lsq_collection"
+GROUP BY "lsq_collection"."Call_Type";
+
+-- Analyzing Birth Dates and Age
+SELECT 
+    "lsq_collection"."Birth_Date__Client",
+    "lsq_collection"."Age",
+    COUNT(*) AS Total_Count,
+    AVG("lsq_collection"."Monthly_Income__Client") AS Avg_Monthly_Income,
+    MAX("lsq_collection"."Monthly_Income__Client") AS Max_Monthly_Income,
+    MIN("lsq_collection"."Monthly_Income__Client") AS Min_Monthly_Income
+FROM "public"."lsq_collection"
+GROUP BY "lsq_collection"."Birth_Date__Client", "lsq_collection"."Age";
+
+
+-- Analyzing Promise to Pay (PTP) Details
+SELECT 
+    "lsq_collection"."PTP",
+    "lsq_collection"."PTP_Count",
+    MAX("lsq_collection"."PTP1_Amount") AS Max_PTP1_Amount,
+    MIN("lsq_collection"."PTP1_Amount") AS Min_PTP1_Amount,
+    AVG("lsq_collection"."PTP1_Amount") AS Avg_PTP1_Amount,
+    MAX("lsq_collection"."PTP2_Amount") AS Max_PTP2_Amount,
+    MIN("lsq_collection"."PTP2_Amount") AS Min_PTP2_Amount,
+    AVG("lsq_collection"."PTP2_Amount") AS Avg_PTP2_Amount
+FROM "public"."lsq_collection"
+GROUP BY "lsq_collection"."PTP", "lsq_collection"."PTP_Count";
+
+-- Analyzing Contact Attempts and Dispositions
+SELECT 
+    "lsq_collection"."Call_Type",
+    "lsq_collection"."Disposition",
+    COUNT(*) AS Total_Count,
+    SUM("lsq_collection"."Number_of_Attempts") AS Total_Attempts,
+    AVG("lsq_collection"."Number_of_Connects_") AS Avg_Connects,
+    MAX("lsq_collection"."Last_Connect") AS Latest_Connect,
+    MIN("lsq_collection"."First_Connect") AS First_Connect
+FROM "public"."lsq_collection"
+GROUP BY "lsq_collection"."Call_Type", "lsq_collection"."Disposition";
+
+
+
+
+
+
+
+
+
+
+
+ 
+ 
+
