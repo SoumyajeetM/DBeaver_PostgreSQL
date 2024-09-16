@@ -1,0 +1,166 @@
+WITH ALLAPPS AS (
+    SELECT distinct "APPLICATION_ID", "CREATE_TS"
+    FROM APPSIEXCEED AS a
+    WHERE UPPER(a."PRODUCT_GROUP_CODE") IN ('LOANS')
+    union all
+    SELECT distinct "APPLICATION_ID", "CREATE_TS"
+    FROM APPSIEXCEEDHIST AS b
+    WHERE UPPER(b."PRODUCT_GROUP_CODE") IN ('LOANS')
+),
+Base1 AS (
+    select distinct
+        1 AS "APPLICATION",
+        A."APPLICATION_ID" AS "APP_ID",
+        DATE(A."CREATE_TS") AS "UW_CREATED_DATE",
+        C."output_response_reject_reasons_0_reason" AS "PRELIM_REASON",
+        C."output_response_status" AS "PRELIM_RESP_STATUS",
+        D."output_response_reject_reasons_0_reason" AS "TURESP_REASON",
+        D."output_response_status" AS "TURESP_STATUS",
+        E."output_response_reject_reasons_0_reason" AS "IDFY_REASON",
+        E."output_response_status" AS "IDFY_STATUS",
+        E."output_response_ip_check" AS "ADDRESP_IP_CHECK",
+        F."output_response_aml_check" AS "AMLRESP_RESPONSE_CHECK",
+        F."output_response_status" AS "AMLRESP_CHECK_STATUS",
+        G."SECOND_CHECKER" AS "RCPV_CHECK",
+        B."UW_Status" AS "RCPV_FINAL_DECISION"
+    FROM ALLAPPS A
+    LEFT JOIN APPSLOAN B ON A."APPLICATION_ID" = B."CW_Transaction_Id"
+    LEFT JOIN APPSLOANPRELIM C ON B."Application_Id" = C."Application_Id"
+    LEFT JOIN APPSLOANTURESP D ON C."Application_Id" = D."Application_Id"
+    LEFT JOIN APPSLOANEADDRESP E ON D."Application_Id" = E."Application_Id"
+    LEFT JOIN APPSLOANAMLRESP F                 ON E."Application_Id" = F."Application_Id"
+    LEFT JOIN LAM_APPLICATION_PROCESS 		AS H ON E."Application_Id" 	= H."application_id"
+	LEFT JOIN LAM_SUB_STAGE_MASTER		    AS I ON H.CUR_SUB_STAGE_ID 	= I.ID
+	LEFT JOIN LAM_NODE_MASTER			    AS J ON H.CUR_NODE_ID 		= J.ID
+	LEFT JOIN L_APP_METADATA					AS K ON B."Application_Id" 	= K."application_id"
+    LEFT JOIN RCPV G                                 ON B."Application_Id" = G."APPLICATION_ID"
+    WHERE DATE(A."CREATE_TS") >= '2024-08-01' and DATE(A."CREATE_TS") < '2024-09-01'
+),
+Base2 AS (
+    SELECT *,
+           CASE
+               WHEN "PRELIM_REASON" = 'DOSRI'
+                    AND UPPER("PRELIM_RESP_STATUS") = 'FAIL'
+                    THEN '01.PRE_DOSRI'
+               WHEN "PRELIM_REASON" = 'Employment - length of employment in same company profession criteria not met'
+                    AND UPPER("PRELIM_RESP_STATUS") = 'FAIL'
+                    THEN '02.PRE_EMPLOYMENT - LENGTH OF EMPLOYMENT IN SAME COMPANY PROFESSION CRITERIA NOT MET'
+               WHEN "PRELIM_REASON" = 'Employment Type Restriction'
+                    AND UPPER("PRELIM_RESP_STATUS") = 'FAIL'
+                    THEN '03.PRE_EMPLOYMENT TYPE RESTRICTION'
+               WHEN "PRELIM_REASON" = 'Employment not in approved category'
+                    AND UPPER("PRELIM_RESP_STATUS") = 'FAIL'
+                    THEN '04.PRE_EMPLOYMENT NOT IN APPROVED CATEGORY'
+               WHEN "PRELIM_REASON" = 'Income lower than threshold'
+                    AND UPPER("PRELIM_RESP_STATUS") = 'FAIL'
+                    THEN '05.PRE_INCOME LOWER THAN THRESHOLD'
+               WHEN "PRELIM_REASON" = 'Location not approved - City'
+                    AND UPPER("PRELIM_RESP_STATUS") = 'FAIL'
+                    THEN '06.PRE_LOCATION NOT APPROVED - CITY'
+               WHEN "PRELIM_REASON" = 'Postal Code not Approved - High Risk locality'
+                    AND UPPER("PRELIM_RESP_STATUS") = 'FAIL'
+                    THEN '07.PRE_POSTAL CODE NOT APPROVED - HIGH RISK LOCALITY'
+               WHEN "PRELIM_REASON" = 'RAC Max Age criteria Not met'
+                    AND UPPER("PRELIM_RESP_STATUS") = 'FAIL'
+                    THEN '08.PRE_RAC MAX AGE CRITERIA NOT MET'
+               WHEN "PRELIM_REASON" = 'RAC Min Age criteria not met'
+                    AND UPPER("PRELIM_RESP_STATUS") = 'FAIL'
+                    THEN '09.PRE_RAC MIN AGE CRITERIA NOT MET'
+               WHEN "PRELIM_REASON" = 'With Previous Rejected Application'
+                    AND UPPER("PRELIM_RESP_STATUS") = 'FAIL'
+                    THEN '10.PRE_WITH PREVIOUS REJECTED APPLICATION'
+               WHEN "PRELIM_REASON" = 'Duplicate Application'
+                    AND UPPER("PRELIM_RESP_STATUS") = 'FAIL'
+                    THEN '10.PRE_DUPLICATE APPLICATION'
+               WHEN "TURESP_REASON" = 'Adverse Credit - Active Acct 60+DPD L6M'
+                    AND UPPER("TURESP_STATUS") = 'FAIL'
+                    THEN '11.TURESP_ADVERSE CREDIT - ACTIVE ACCT 60+DPD L6M'
+               WHEN "TURESP_REASON" = 'Adverse Credit - Active Acct XDPD'
+                    AND UPPER("TURESP_STATUS") = 'FAIL'
+                    THEN '12.TURESP_ADVERSE CREDIT - ACTIVE ACCT XDPD'
+               WHEN "TURESP_REASON" = 'Adverse Credit - Written-off Account with Balance'
+                    AND UPPER("TURESP_STATUS") = 'FAIL'
+                    THEN '13.TURESP_ADVERSE CREDIT - WRITTEN-OFF ACCOUNT WITH BALANCE'
+               WHEN "TURESP_REASON" = 'Adverse Finding'
+                    AND UPPER("TURESP_STATUS") = 'FAIL'
+                    THEN '14.TURESP_ADVERSE FINDING'
+               WHEN "TURESP_REASON" = 'DBR Criteria not met'
+                    AND UPPER("TURESP_STATUS") = 'FAIL'
+                    THEN '15.TURESP_DBR CRITERIA NOT MET'
+               WHEN "TURESP_REASON" = 'Does Not Meet Risk Grade Critera'
+                    AND UPPER("TURESP_STATUS") = 'FAIL'
+                    THEN '16.TURESP_DOES NOT MEET RISK GRADE CRITERA'
+               WHEN "TURESP_REASON" = 'Exception Occured -de.visualrules.runtime.vrinternal.functions.CollectionFunctions533assertNotZero'
+                    AND UPPER("TURESP_STATUS") = 'FAIL'
+                    THEN '17.TURESP_EXCEPTION OCCURED -DE.VISUALRULES.RUNTIME.VRINTERNAL.FUNCTIONS.COLLECTIONFUNCTIONS533ASSERTNOTZERO'
+               WHEN "TURESP_REASON" = 'Income lower than threshold'
+                    AND UPPER("TURESP_STATUS") = 'FAIL'
+                    THEN '18.TURESP_INCOME LOWER THAN THRESHOLD'
+               WHEN "TURESP_REASON" = 'Line assessed below minimum threshold'
+                    AND UPPER("TURESP_STATUS") = 'FAIL'
+                    THEN '19.TURESP_LINE ASSESSED BELOW MINIMUM THRESHOLD'
+               WHEN "IDFY_REASON" = 'Location not approved - City'
+                    AND UPPER("IDFY_STATUS") = 'FAIL'
+                    THEN '21.IDFY_KYC & VERIFICATION FAILED - OTHERS'
+               WHEN "IDFY_REASON" = 'Location not approved - City'
+                    AND UPPER("IDFY_STATUS") = 'FAIL'
+                    THEN '22.IDFY_KYC & VERIFICATION FAILED - OTHERS'
+               WHEN "AMLRESP_RESPONSE_CHECK" = 'Fail'
+                    THEN '23.AML_PASS'
+               WHEN UPPER("RCPV_CHECK") IN ('AWAITING FOR RESULT','CANCEL','DUPLICATE','NEGATIVE','OUT OF COVERAGE','OUT OF COVERAGE AREA','POSITIVE','PULL OUT','RETURN TO UW')
+                    AND UPPER("RCPV_FINAL_DECISION") = 'APPROVED'
+                    THEN '24.RCPV_APPROVED'
+               WHEN UPPER("RCPV_CHECK") IN ('AWAITING FOR RESULT','CANCEL','DUPLICATE','NEGATIVE','OUT OF COVERAGE','OUT OF COVERAGE AREA','POSITIVE','PULL OUT','RETURN TO UW')
+                    AND UPPER("RCPV_FINAL_DECISION") = 'CANCEL'
+                    THEN '25.RCPV_CANCEL'
+               WHEN UPPER("RCPV_CHECK") IN ('AWAITING FOR RESULT','CANCEL','DUPLICATE','NEGATIVE','OUT OF COVERAGE','OUT OF COVERAGE AREA','POSITIVE','PULL OUT','RETURN TO UW')
+                    AND UPPER("RCPV_FINAL_DECISION") = 'DECLINED'
+                    THEN '26.RCPV_DECLINED'
+               WHEN UPPER("RCPV_CHECK") IN ('AWAITING FOR RESULT','CANCEL','DUPLICATE','NEGATIVE','OUT OF COVERAGE','OUT OF COVERAGE AREA','POSITIVE','PULL OUT','RETURN TO UW')
+                    AND UPPER("RCPV_FINAL_DECISION") = 'DECLINE'
+                    THEN '27.RCPV_DECLINE'
+               WHEN UPPER("RCPV_CHECK") IN ('AWAITING FOR RESULT','CANCEL','DUPLICATE','NEGATIVE','OUT OF COVERAGE','OUT OF COVERAGE AREA','POSITIVE','PULL OUT','RETURN TO UW')
+                    AND UPPER("RCPV_FINAL_DECISION") = 'EKYC PENDING'
+                    THEN '28.RCPV_EKYC PENDING'
+               WHEN UPPER("RCPV_CHECK") IN ('AWAITING FOR RESULT','CANCEL','DUPLICATE','NEGATIVE','OUT OF COVERAGE','OUT OF COVERAGE AREA','POSITIVE','PULL OUT','RETURN TO UW')
+                    AND UPPER("RCPV_FINAL_DECISION") = 'ENDORSED TO EKYC'
+                    THEN '30.RCPV_ENDORSED TO EKYC'
+               WHEN UPPER("RCPV_CHECK") IN ('AWAITING FOR RESULT','CANCEL','DUPLICATE','NEGATIVE','OUT OF COVERAGE','OUT OF COVERAGE AREA','POSITIVE','PULL OUT','RETURN TO UW')
+                    AND UPPER("RCPV_FINAL_DECISION") = 'PENDING'
+                    THEN '31.RCPV_PENDING'
+           END AS "WATERFALL"
+    FROM Base1
+),
+Base3 AS (
+    SELECT
+        "WATERFALL",
+        COUNT(*) AS "DROP_OFFS",
+        (SELECT COUNT(*) FROM Base2 where "WATERFALL" IS NOT NULL OR "WATERFALL" <> '') AS TOTAL_APPS
+    FROM Base2
+    where "WATERFALL" IS NOT NULL OR "WATERFALL" <> ''
+    GROUP BY "WATERFALL" order by "WATERFALL"
+),
+CumulativeSum AS (
+    SELECT *,
+           SUM("DROP_OFFS") OVER (ORDER BY "WATERFALL") AS "RUNNING_TOTAL"
+    FROM Base3
+),
+UniqueCalculation AS (
+    SELECT *,
+           (TOTAL_APPS - "RUNNING_TOTAL") AS UNIQUE,
+           LAG(TOTAL_APPS - "RUNNING_TOTAL") OVER (ORDER BY "WATERFALL") AS "LAG_DIFF"
+    FROM CumulativeSum
+),
+FinalCalculation AS (
+    SELECT *,
+           COALESCE("LAG_DIFF", TOTAL_APPS) AS "UNIQUE_APPS"
+    FROM UniqueCalculation
+)
+SELECT "WATERFALL",
+       "UNIQUE_APPS",
+       "DROP_OFFS",
+       "RUNNING_TOTAL"
+FROM FinalCalculation
+WHERE "WATERFALL" <> '';
+-------------------------------------------
+--select * from Base3;
