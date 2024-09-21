@@ -1,0 +1,86 @@
+WITH APPS AS (
+    SELECT "APPLICATION_ID", "CREATE_TS"
+    FROM APPSIEXCEED AS a
+    WHERE UPPER(a."PRODUCT_GROUP_CODE") = 'LOANS'
+    AND "APPLICATION_ID" IS NOT NULL AND "APPLICATION_ID" <> ''
+    AND "MOBILE_NUMBER" IS NOT NULL AND "MOBILE_NUMBER" <> ''
+    AND "CREATE_TS" >= '2024-09-01' AND "CREATE_TS" < '2024-10-01'  -- Early filtering by date
+    
+    UNION ALL
+    
+    SELECT "APPLICATION_ID", "CREATE_TS"
+    FROM APPSIEXCEEDHIST AS b
+    WHERE UPPER(b."PRODUCT_GROUP_CODE") = 'LOANS'
+    AND "APPLICATION_ID" IS NOT NULL AND "APPLICATION_ID" <> ''
+    AND "MOBILE_NUMBER" IS NOT NULL AND "MOBILE_NUMBER" <> ''
+    AND "CREATE_TS" >= '2024-09-01' AND "CREATE_TS" < '2024-10-01'  -- Early filtering by date
+)
+
+--SELECT l.prelim_result, COUNT(l.application_id)
+--FROM APPSLOAN B
+--JOIN APPS as A ON A."APPLICATION_ID" = B."CW_Transaction_Id"
+--JOIN loan_app_datamart l ON B."Application_Id" = l.application_id 
+--GROUP BY l.prelim_result;
+
+--SELECT l.idfy_result, COUNT(l.application_id)
+--FROM APPSLOAN B
+--JOIN APPS as A ON A."APPLICATION_ID" = B."CW_Transaction_Id"
+--JOIN loan_app_datamart l ON B."Application_Id" = l.application_id 
+--WHERE l.prelim_result = 'Pass'  -- Already filtered in CTE
+--GROUP BY l.idfy_result;
+
+--SELECT l.tu_result , COUNT(l.application_id)
+--FROM APPSLOAN B
+--JOIN APPS as A ON A."APPLICATION_ID" = B."CW_Transaction_Id"
+--JOIN loan_app_datamart l ON B."Application_Id" = l.application_id 
+--WHERE l.prelim_result = 'Pass' and 
+--(l.idfy_result = 'Pass' or l.idfy_result isnull )
+--GROUP BY l.tu_result;
+
+--SELECT 
+--    l.unit_sub_stage,
+--    COUNT(CASE WHEN l.uw_status = 'IN-PROGRESS' THEN l.application_id END) AS In_Progress,
+--    COUNT(CASE WHEN l.uw_status = 'Cancel' THEN l.application_id END) AS Cancel,
+--    COUNT(CASE WHEN l.uw_status = 'Fail' or l.uw_status = 'fail' THEN l.application_id END) AS Fail,
+--    COUNT(CASE WHEN l.uw_status = 'Referral' THEN l.application_id END) AS Referral,
+--    COUNT(CASE WHEN l.uw_status = 'Pass' THEN l.application_id END) AS Pass,
+--    COUNT(CASE WHEN l.uw_status IS NULL THEN l.application_id END) AS Unknown_Status,
+--    COUNT(l.application_id) AS Total
+--FROM APPSLOAN B
+--JOIN APPS AS A ON A."APPLICATION_ID" = B."CW_Transaction_Id"
+--JOIN loan_app_datamart l ON B."Application_Id" = l.application_id 
+--WHERE l.prelim_result = 'Pass' 
+--AND (l.idfy_result = 'Pass' OR l.idfy_result IS NULL) 
+--AND l.tu_result = 'Pass'
+--GROUP BY l.unit_sub_stage;
+
+--SELECT l.uw_offer_status , COUNT(l.application_id), sum(l.uw_approved_amount) 
+--FROM APPSLOAN B
+--JOIN APPS as A ON A."APPLICATION_ID" = B."CW_Transaction_Id"
+--JOIN loan_app_datamart l ON B."Application_Id" = l.application_id 
+--WHERE l.prelim_result = 'Pass' and 
+--(l.idfy_result = 'Pass' or l.idfy_result isnull )
+--AND l.tu_result = 'Pass'
+--and l.uw_status = 'Pass'
+--GROUP BY l.uw_offer_status;
+
+SELECT l.uw_offer_status , COUNT(l.application_id), sum(l.uw_approved_amount) 
+FROM APPSLOAN B
+JOIN APPS as A ON A."APPLICATION_ID" = B."CW_Transaction_Id"
+JOIN loan_app_datamart l ON B."Application_Id" = l.application_id 
+WHERE 
+--l.prelim_result = 'Pass' and 
+--(l.idfy_result = 'Pass' or l.idfy_result isnull )
+--AND l.tu_result = 'Pass'and
+l.uw_status = 'Pass'
+GROUP BY l.uw_offer_status;
+
+
+
+
+
+--select * from appsiexceed a 
+
+
+
+
